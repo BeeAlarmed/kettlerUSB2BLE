@@ -66,7 +66,17 @@ class FitnessControlPoint extends Bleno.Characteristic {
 	onSubscribe(maxValueSize, updateValueCallback) {
 		if (DEBUG)
 			console.log('[FitnessControlPoint] onSubscribe');
-		this.serverCallback = updateValueCallback;
+
+		// Wrap the callback to be able to log details on indications
+		var tmp = function(){
+			if (DEBUG)
+				console.log("Indicate response:");
+				console.log.apply(null, arguments);
+			}
+			updateValueCallback.apply(null, arguments);
+		}
+
+		this.serverCallback = tmp;
 		return this.RESULT_SUCCESS;
 	};
 

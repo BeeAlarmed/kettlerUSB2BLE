@@ -44,8 +44,11 @@
 	 
       </style>
       <script type="text/javascript">
-         var socket = io.connect("192.168.1.36:3000");
-         socket.on('speed', function (data) {  
+         var socket = io.connect("192.168.178.42:3000");
+         	 socket.on('console', function (data) {  
+			console.log(data)
+         });
+         	 socket.on('speed', function (data) {  
 			$('#speed').html(data);
          });
 		 socket.on('hr', function (data) {  

@@ -31,6 +31,14 @@ server = app.listen(3000, function () {
 		console.log('Kettler app listening on port 3000!');
 	});
 const io = require("socket.io")(server);
+
+// Wrap 'console.log' to be able to forward log messages to the UI
+tmp = console.log
+console.log = function(){
+	tmp.apply(null, arguments);
+	io.emit("console", arguments);
+}
+
 io.on('connection', (socket) => {
 	socket.on('key', function (ev) {
 		console.log('key' + ev);
