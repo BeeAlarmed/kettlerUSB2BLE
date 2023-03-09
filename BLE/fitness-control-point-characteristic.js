@@ -69,7 +69,7 @@ class FitnessControlPoint extends Bleno.Characteristic {
 
 		// Wrap the callback to be able to log details on indications
 		var tmp = function(){
-			if (DEBUG)
+			if (DEBUG){
 				console.log("Indicate response:");
 				console.log.apply(null, arguments);
 			}
