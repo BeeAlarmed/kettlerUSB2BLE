@@ -45,13 +45,15 @@ class FitnessControlPoint extends Bleno.Characteristic {
 			uuid: '2AD9',
 			value: null,
 			properties: ['write', 'indicate'],
-			descriptors: [
+			/* Not needed as Bleno already adds the CCCD
+			 * descriptors: [
 				new Bleno.Descriptor({
 					// Client Characteristic Configuration
 					uuid: '2902',
 					value: Buffer.alloc(2)
 				})
 			]
+			*/
 		});
 
 		this.underControl = false;
@@ -82,9 +84,13 @@ class FitnessControlPoint extends Bleno.Characteristic {
 
 	// Follow Control Point instruction from the client
 	onWriteRequest(data, offset, withoutResponse, callback) {
+
+		if (DEBUG)
+			console.log("CTRL Write received: ", data.toJSON().data.toString());
+
 		var state = data.readUInt8(0);
 		callback(this.RESULT_SUCCESS);
-		 
+
 		switch (state) {
 		case ControlPointOpCode.requestControl:
 			if (DEBUG)
@@ -130,7 +136,10 @@ class FitnessControlPoint extends Bleno.Characteristic {
 		case ControlPointOpCode.setTargetPower:
 			if (DEBUG)
 				console.log('[FitnessControlPoint] ControlPointOpCode.setTargetPower.');
-			if (this.underControl) {
+			
+			// Zwifts sometimes sends the setTargetPower before requesting control. 
+			// Be less strict on the workflow for better user experience 
+			//if (this.underControl) {
 				var watt = data.readUInt16LE(1);
 				if (DEBUG)
 					console.log('[FitnessControlPoint] watt : ' + watt);
@@ -141,11 +150,11 @@ class FitnessControlPoint extends Bleno.Characteristic {
 						console.log('[FitnessControlPoint] setTarget failed');
 					this.serverCallback(this.buildResponse(state, ResultCode.operationFailed));
 				}
-			} else {
-				if (DEBUG)
-					console.log('[FitnessControlPoint] setTargetPower without control.');
-				this.serverCallback(this.buildResponse(state, ResultCode.controlNotPermitted));
-			}
+			//} else {
+			//	if (DEBUG)
+			//		console.log('[FitnessControlPoint] setTargetPower without control.');
+			//	this.serverCallback(this.buildResponse(state, ResultCode.controlNotPermitted));
+			//}
 			break;
 
 		case ControlPointOpCode.startOrResume:
