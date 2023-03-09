@@ -1,3 +1,10 @@
+# Forked to fix BLE (09.03.2023)
+- Zwift now works on both Windows and Android
+- Added logging to Web-UI: All logging info will be forwarded to the Web-UI console
+
+___
+
+
 # Kettler Bridge
 This software is a bridge between an old KettlerBike with USB Serial port to a fresh Bluetooth Low Energy peripheral implementing FTMS and some GATT services.
 * the bike appears as a controlable Bike (FTMS, with SIM and ERG support)
