@@ -1,7 +1,7 @@
 var $q = require('q');
 var EventEmitter = require('events').EventEmitter;
 var SerialPort = require('serialport');
-var DEBUG = true;
+var DEBUG = false;
 var MOCKDEBUG = false;
 
 const Readline = SerialPort.parsers.Readline;
