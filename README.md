@@ -2,6 +2,17 @@
 - Zwift now works on both Windows and Android
 - Added logging to Web-UI: All logging info will be forwarded to the Web-UI console
 
+
+## Works with Swift
+
+## Works with Kinoomaps
+
+- Add Devive
+- Select Bike Trainer or Home Ergometer
+- Scroll down and select 'FTMS' 
+- Choose add device
+- You should see poser, speed, heart rate and RPM in the App
+- Click save / add device
 ___
 
 
