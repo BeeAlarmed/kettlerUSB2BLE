@@ -147,9 +147,7 @@ class FitnessControlPoint extends Bleno.Characteristic {
 			if (DEBUG)
 				console.log('[FitnessControlPoint] ControlPointOpCode.setTargetPower.');
 			
-			// Zwifts sometimes sends the setTargetPower before requesting control. 
-			// Be less strict on the workflow for better user experience 
-			//if (this.underControl) {
+			if (this.underControl) {
 				var watt = data.readUInt16LE(1);
 				if (DEBUG)
 					console.log('[FitnessControlPoint] watt : ' + watt);
@@ -160,11 +158,11 @@ class FitnessControlPoint extends Bleno.Characteristic {
 						console.log('[FitnessControlPoint] setTarget failed');
 					this.serverCallback(this.buildResponse(state, ResultCode.operationFailed));
 				}
-			//} else {
-			//	if (DEBUG)
-			//		console.log('[FitnessControlPoint] setTargetPower without control.');
-			//	this.serverCallback(this.buildResponse(state, ResultCode.controlNotPermitted));
-			//}
+			} else {
+				if (DEBUG)
+					console.log('[FitnessControlPoint] setTargetPower without control.');
+				this.serverCallback(this.buildResponse(state, ResultCode.controlNotPermitted));
+			}
 			break;
 
 		case ControlPointOpCode.startOrResume:
@@ -186,12 +184,14 @@ class FitnessControlPoint extends Bleno.Characteristic {
 			var grade = data.readInt16LE(3) * 0.01;
 			var crr = data.readUInt8(5) * 0.0001;
 			var cw = data.readUInt8(6) * 0.01;
-			if (this.ClientCallback('simulation', windspeed, grade, crr, cw)) {
-				this.serverCallback(this.buildResponse(state, ResultCode.success));
-			} else {
-				if (DEBUG)
-					console.log('[FitnessControlPoint] simulation failed');
-				this.serverCallback(this.buildResponse(state, ResultCode.operationFailed));
+			if (this.underControl) {
+				if (this.ClientCallback('simulation', windspeed, grade, crr, cw)) {
+					this.serverCallback(this.buildResponse(state, ResultCode.success));
+				} else {
+					if (DEBUG)
+						console.log('[FitnessControlPoint] simulation failed');
+					this.serverCallback(this.buildResponse(state, ResultCode.operationFailed));
+				}
 			}
 			break;
 
