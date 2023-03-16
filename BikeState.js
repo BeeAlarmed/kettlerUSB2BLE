@@ -4,6 +4,7 @@ var DEBUG = false;
 
 var minGear = 1;
 var maxGear = 10;
+var gearRatio = [0.4, 0.6, 0.9, 1.3, 1.8, 2.4, 3.1, 3.9, 4.8, 5.8];
 
 class BikeState extends EventEmitter {
 
@@ -103,11 +104,38 @@ class BikeState extends EventEmitter {
 		if (this.external == null)
 			return;
 
-		var simpower = 170 * (1 + 1.15 * (this.data.rpm - 80.0) / 80.0) * (1.0 + 3 * this.external.grade / 100.0);
+		var G = 9.81;
+		var weight = 80; 	// bike + driver 
+		var circum = 2.1	// Wire circumference
+		//var ratio = 0.61 + (this.gear -1) * 0.335
+		//var ratio = 0.40 + (this.gear -1) * 0.2
+		var ratio = gearRatio[this.gear];
+		var losses = 0.05
+
+		var speed = this.data.rpm * ratio * circum / 60 
+
+		// FG = 9.81 * sin(atan(grad)) * weight 
+		var FG = G * Math.sin(this.external.grade / 180 * Math.PI) * weight
+
+		// FR = 9.81 * cos(atan(grad)) * weight * CRR
+		var FR = G * Math.cos(this.external.grade / 180 * Math.PI) * weight * this.external.crr
+
+		// FA = 0.5 * CW * 1,225 * speed
+		var FA = 0.5 * this.external.cw * 1.225 * speed
+
+		var P = (FG + FR + FA) * speed / ( 1 - losses)
+		P = Math.max(50, P) 
+		P = P.toFixed(1)
+		
+		console.log(P, this.external)
+		simpower = P
+		
+
+		//var simpower = 170 * (1 + 1.15 * (this.data.rpm - 80.0) / 80.0) * (1.0 + 3 * this.external.grade / 100.0);
 		// apply gear
-		simpower = Math.max(0.0, simpower * (1.0 + 0.1 * (this.gear - 5)));
+		//simpower = Math.max(0.0, simpower * (1.0 + 0.1 * (this.gear - 5)));
 		// store
-		simpower = simpower.toFixed(1);
+		//simpower = simpower.toFixed(1);
 
 		if (DEBUG) {
 			console.log('[BikeState.js] - SIM rpm: ', this.data.rpm);
@@ -121,3 +149,4 @@ class BikeState extends EventEmitter {
 };
 
 module.exports = BikeState
+
