@@ -123,12 +123,12 @@ class BikeState extends EventEmitter {
 		// FA = 0.5 * CW * 1,225 * speed
 		var FA = 0.5 * this.external.cw * 1.225 * speed
 
-		var P = (FG + FR + FA) * speed / ( 1 - losses)
-		P = Math.max(50, P) 
-		P = P.toFixed(1)
+		var P = (FG + FR + FA) * speed / ( 1 - losses);
+		P = Math.max(50, P);
+		P = P.toFixed(1);
 		
 		console.log(P, this.external)
-		simpower = P
+		var simpower = P
 		
 
 		//var simpower = 170 * (1 + 1.15 * (this.data.rpm - 80.0) / 80.0) * (1.0 + 3 * this.external.grade / 100.0);
