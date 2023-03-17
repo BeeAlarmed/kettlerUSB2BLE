@@ -4,7 +4,11 @@ var DEBUG = false;
 
 var minGear = 1;
 var maxGear = 10;
-var gearRatio = [0.2, 0.3, 0.6, 0.9, 1.3, 1.9, 2.8, 3.7, 4.8, 5.8];
+var gearRatio = [0.2, 0.25, 0.3, 0.35, 0.5, 1.0, 1.6, 2.2, 3.5, 5];
+var useRealCalc = true;
+var wattIncPerSec = 5;
+var wattDecPerSec = 25;
+
 
 class BikeState extends EventEmitter {
 
@@ -27,6 +31,8 @@ class BikeState extends EventEmitter {
 		this.lastWHEEL_cnt  = 0;
 		this.WHEEL_time = 0;
 		this.WHEEL_cnt  = 0;
+
+		this.currentPower = 50;
 	};
 
 	// Restart the trainer
@@ -224,45 +230,58 @@ class BikeState extends EventEmitter {
 		if (this.external == null)
 			return;
 
-		var G = 9.81;
-		var weight = 80.0; 	// bike + driver 
-		var circum = 2.1	// Wire circumference
-		//var ratio = 0.61 + (this.gear -1) * 0.335
-		//var ratio = 0.40 + (this.gear -1) * 0.2
-		var ratio = gearRatio[this.gear -1];
-		var losses = 0.05;
+		var simpower = 0;
+		if (useRealCalc){
 
-		var speed = this.data.rpm * ratio * circum / 60.0 ;
+			var G = 9.81;
+			var weight = 80.0; 	// bike + driver 
+			var circum = 2.1	// Wire circumference
+			var ratio = gearRatio[this.gear -1];
+			var losses = 0.05;
 
-		// FG = 9.81 * sin(atan(grad)) * weight 
-		var FG = G * Math.sin(this.external.grade / 180.0 * Math.PI) * weight;
+			var speed = this.data.rpm * ratio * circum / 60.0 ;
 
-		// FR = 9.81 * cos(atan(grad)) * weight * CRR
-		var FR = G * Math.cos(this.external.grade / 180.0 * Math.PI) * weight * this.external.crr;
+			// FG = 9.81 * sin(atan(grad)) * weight 
+			var FG = G * Math.sin(this.external.grade / 180.0 * Math.PI) * weight;
 
-		// FA = 0.5 * CW * 1,225 * speed
-		var FA = 0.5 * this.external.cw * 1.225 * speed;
+			// FR = 9.81 * cos(atan(grad)) * weight * CRR
+			var FR = G * Math.cos(this.external.grade / 180.0 * Math.PI) * weight * this.external.crr;
 
-		var P = (FG + FR + FA) * speed / ( 1 - losses);
-		P = Math.max(50.0, P);
-		P = P.toFixed(1);
-		
-		var simpower = P;
-		
+			// FA = 0.5 * CW * 1,225 * speed
+			var FA = 0.5 * this.external.cw * 1.225 * speed;
 
-		//var simpower = 170 * (1 + 1.15 * (this.data.rpm - 80.0) / 80.0) * (1.0 + 3 * this.external.grade / 100.0);
-		// apply gear
-		//simpower = Math.max(0.0, simpower * (1.0 + 0.1 * (this.gear - 5)));
-		// store
-		//simpower = simpower.toFixed(1);
+			var P = (FG + FR + FA) * speed / ( 1 - losses);
+			P = Math.max(50.0, P);
+			P = P.toFixed(1);
+			
+			simpower = P;
+		}else{
+
+			simpower = 170 * (1 + 1.15 * (this.data.rpm - 80.0) / 80.0) * (1.0 + 3 * this.external.grade / 100.0);
+			simpower = Math.max(0.0, simpower * (1.0 + 0.1 * (this.gear - 5)));
+			simpower = simpower.toFixed(1);
+		}	
+
+		this.emit('targetpower', simpower);
+
+		// Set power changes slowly
+		if (this.currentPower <= simpower) {
+			this.currentPower += wattIncPerSec;
+			simpower = Math.min(simpower, this.currentPower);
+		}else{
+			this.currentPower -= wattDecPerSec;
+			simpower = Math.max(simpower, this.currentPower);
+		}
 
 		if (DEBUG) {
 			console.log('[BikeState.js] - SIM rpm: ', this.data.rpm);
 			console.log('[BikeState.js] - SIM pente: ', this.external.grade);
 			console.log('[BikeState.js] - SIM gear : ', this.gear);
+			console.log('[BikeState.js] - SIM current power: ', this.currentPower);
 			console.log('[BikeState.js] - SIM calculated power: ', simpower);
 		}
 
+		this.currentPower = simpower;
 		this.emit('simpower', simpower);
 	};
 };

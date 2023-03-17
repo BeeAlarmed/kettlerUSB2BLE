@@ -81,6 +81,9 @@ var bikeState = new BikeState();
 bikeState.on('mode', (mode) => {
 	io.emit('mode', mode);
 });
+bikeState.on('targetpower', (targetpower) => {
+	io.emit('targetpower', targetpower);
+});
 bikeState.on('gear', (gear) => {
 	io.emit('gear', gear);
 	// oled.displayGear(gear);

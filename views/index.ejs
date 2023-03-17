@@ -57,6 +57,9 @@
 		 socket.on('power', function (data) {  
 			$('#power').html(data);
          });
+		 socket.on('targetpower', function (data) {  
+			$('#targetpower').html(data);
+         });
 		 socket.on('gear', function (data) {  
 			$('#gear').html(data);
          });
@@ -107,8 +110,10 @@
 				<div class="numbers" id="speed">0</div>  
 			</td>
 			<td>
-			  <div class="BoldH">Power</div>
+			  	<div class="BoldH">Power</div>
 				<div class="numbers" id="power">0</div>   
+			  	<div class="BoldH">Target Power</div>
+				<div class="numbers" id="targetpower">0</div>   
 			</td>
 			<td>
 				<div class="BoldH" >Vent</div>
