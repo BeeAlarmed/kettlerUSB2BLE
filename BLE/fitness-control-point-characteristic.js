@@ -195,10 +195,17 @@ class FitnessControlPoint extends Bleno.Characteristic {
 			}
 			break;
 
+		
+
 		default: // anything else : not yet implemented
-			if (DEBUG)
+			if (DEBUG) {
 				console.log('[FitnessControlPoint] State is not supported ' + state + '.');
-			this.serverCallback(this.buildResponse(state, ResultCode.opCodeNotSupported));
+				console.log(data)
+			}
+			
+			if (this.underControl) {
+				this.serverCallback(this.buildResponse(state, ResultCode.opCodeNotSupported));
+			}
 			break;
 		}
 	};

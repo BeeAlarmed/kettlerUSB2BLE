@@ -4,7 +4,7 @@ var DEBUG = false;
 
 var minGear = 1;
 var maxGear = 10;
-var gearRatio = [0.4, 0.6, 0.9, 1.3, 1.8, 2.4, 3.1, 3.9, 4.8, 5.8];
+var gearRatio = [0.2, 0.3, 0.6, 0.9, 1.3, 1.9, 2.8, 3.7, 4.8, 5.8];
 
 class BikeState extends EventEmitter {
 
@@ -17,6 +17,16 @@ class BikeState extends EventEmitter {
 		this.external = null;
 		this.mode = 'ERG'; // ERG ou SIM
 		this.gear = 1;
+
+		this.lastRPM_time = 0;
+		this.lastRPM_cnt  = 0;
+		this.RPM_time = 0;
+		this.RPM_cnt  = 0;
+		
+		this.lastWHEEL_time = 0;
+		this.lastWHEEL_cnt  = 0;
+		this.WHEEL_time = 0;
+		this.WHEEL_cnt  = 0;
 	};
 
 	// Restart the trainer
@@ -33,8 +43,8 @@ class BikeState extends EventEmitter {
 	// Current state
 	setData(data) {
 		this.data = data;
-		// update
 		this.compute();
+		return this.data;
 	};
 
 	setGear(gear) {
@@ -92,14 +102,124 @@ class BikeState extends EventEmitter {
 		this.emit('grade', (grade).toFixed(1));
 	};
 
-	// Do the math
-	compute() {
-		// rien si en mode ERG
-		if (this.mode === 'ERG')
-			return;
+
+	compute_crank_revs_for_CPM() {
+		this.data.RPMcnt = 0;
+		this.data.RPMtime = 0;
+
 		// pas de data du velo : on ne peut rien faire
 		if (this.data == null)
 			return;
+
+		//
+		// Update crank revs for the cycle power measurement char
+		//
+		var rpm = this.data.rpm;	
+		this.data.RPMcnt = this.RPM_cnt;
+		this.data.RPMtime = this.RPM_time;
+
+		if(rpm){
+			if(this.lastRPM_time == 0) {
+				this.lastRPM_time = Date.now();
+			}
+
+			// Get time difference
+			var current_time = Date.now();
+			var t_diff = current_time - this.lastRPM_time;
+
+			// Calculate revs made in the meantime
+			var rpm_speed = (rpm / 60);
+			var rpm_add = t_diff / 1000 * rpm_speed;
+
+			// Full wheel change reached?
+			var full_change = Math.floor(this.lastRPM_cnt + rpm_add) - Math.floor(this.lastRPM_cnt);
+			if (full_change >= 1){
+				this.lastRPM_cnt += rpm_add;
+				this.lastRPM_time = current_time;
+
+				// We can only sent full revs, so calculate time for the partial revs
+				// and subtract it
+				var partial_rpm_revs = this.lastRPM_cnt - Math.floor(this.lastRPM_cnt);
+				var partial_rpm_time = partial_rpm_revs * (1000/rpm_speed);
+
+				// Calculate new rev-time
+				var t = ((current_time - partial_rpm_time)) * 1.024;
+				var et = t % 65536;
+
+				// Assign accumulated crank revs
+				this.RPM_cnt = Math.floor(this.lastRPM_cnt);
+				this.RPM_time = et;
+				this.data.RPMcnt = this.RPM_cnt;
+				this.data.RPMtime = this.RPM_time;
+			}
+		}
+	};
+	
+	compute_wheel_revs_for_CPM() {
+		this.data.WHEELcnt = 0;
+		this.data.WHEELtime = 0;
+
+		// pas de data du velo : on ne peut rien faire
+		if (this.data == null)
+			return;
+
+		var rpm = this.data.rpm;	
+		this.data.WHEELcnt = this.WHEEL_cnt;
+		this.data.WHEELtime = this.WHEEL_time;
+
+		if (rpm){
+			if(this.lastWHEEL_time == 0) {
+				this.lastWHEEL_time = Date.now();
+			}
+
+			var ratio = gearRatio[this.gear - 1];
+
+			// Get time difference
+			var current_time = Date.now();
+			var t_diff = current_time - this.lastWHEEL_time;
+
+			// Calculate revs made in the meantime
+			var wheel_speed = (rpm / 60) * ratio;
+			var wheel_add = t_diff / 1000 * wheel_speed;
+
+			// Full wheel change reached?
+			var full_change = Math.floor(this.lastWHEEL_cnt + wheel_add) - Math.floor(this.lastWHEEL_cnt);
+			if (full_change >= 1){
+				this.lastWHEEL_cnt += wheel_add;
+				this.lastWHEEL_time = current_time;
+
+				// We can only sent full wheel-revs, so calculate time for the partial revs
+				// and subtract it
+				var partial_wheel_revs = this.lastWHEEL_cnt - Math.floor(this.lastWHEEL_cnt);
+				var partial_wheel_time = partial_wheel_revs * (1000/wheel_speed);
+
+				// Calculate new rev-time
+				var t = ((current_time - partial_wheel_time)) * 2.048;
+				var et = t % 65536;
+
+				// Assign accumulated crank revs
+				this.WHEEL_cnt = Math.floor(this.lastWHEEL_cnt);
+				this.WHEEL_time = et;
+				this.data.WHEELcnt = this.WHEEL_cnt;
+				this.data.WHEELtime = this.WHEEL_time;
+			}
+		}
+	};
+
+	// Do the math
+	compute() {
+
+		this.compute_crank_revs_for_CPM();
+		this.compute_wheel_revs_for_CPM();
+
+		// pas de data du velo : on ne peut rien faire
+		if (this.data == null)
+			return;
+
+		// rien si en mode ERG
+		if (this.mode === 'ERG')
+			return;
+
 		// pas de data externe : on ne peut rien faire
 		if (this.external == null)
 			return;
@@ -109,7 +229,7 @@ class BikeState extends EventEmitter {
 		var circum = 2.1	// Wire circumference
 		//var ratio = 0.61 + (this.gear -1) * 0.335
 		//var ratio = 0.40 + (this.gear -1) * 0.2
-		var ratio = gearRatio[this.gear];
+		var ratio = gearRatio[this.gear -1];
 		var losses = 0.05;
 
 		var speed = this.data.rpm * ratio * circum / 60.0 ;

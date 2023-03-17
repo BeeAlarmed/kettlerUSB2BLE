@@ -112,7 +112,7 @@ kettlerUSB.on('start', () => {
 });
 kettlerUSB.on('data', (data) => {
 	// keep
-	bikeState.setData(data);
+	data = bikeState.setData(data);
 
 	// send to html server
 	if ('speed' in data)
